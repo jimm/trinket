@@ -51,6 +51,11 @@ out.
 
 Transforms one kind of MIDI message into another.
 
+## Clock
+
+Has a BPM setting (beats per minute) and sends out a MIDI CLOCK message 24
+times per beat.
+
 ### Source Message Types
 
 - Note on value
