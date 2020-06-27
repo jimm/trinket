@@ -1,0 +1,5 @@
+trinket
+trinket_test
+*.d
+*.o
+TAGS
