@@ -7,6 +7,7 @@ class Range : public Pipe {
 public:
   int low;
   int high;
+  bool keep_in_range;           // if true, keep b/w low high; if false, reject
 
   Range(sqlite3_int64 id = UNDEFINED_ID);
 
