@@ -6,24 +6,23 @@
 
 class Clock : public Pipe {
 public:
-  int running;
-  long microsecs_per_tick;
-  long prev_beat_sent_at;
+  long nanosecs_per_tick;
 
   Clock(sqlite3_int64 id = UNDEFINED_ID);
   ~Clock();
 
-  int bpm() { return _bpm; }
-  void set_bpm(int bpm);
+  float bpm() { return _bpm; }
+  void set_bpm(float bpm);
 
   void start();
   void stop();
-  void tick();
+  long tick();
+  bool is_running() { return thread != nullptr; }
 
   void process(byte status, byte data1, byte data2, byte data3);
 
 protected:
-  int _bpm;
+  float _bpm;
   pthread_t thread;
 };
 

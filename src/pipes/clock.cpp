@@ -1,16 +1,12 @@
 #include <sys/time.h>
-#include "../predicates.h"
 #include "clock.h"
 
-// 10 milliseconds, in nanoseconds
-#define SLEEP_NANOSECS 10000000L
-
 void *clock_send_thread(void *clock_ptr) {
-  struct timespec rqtp = {0, SLEEP_NANOSECS};
+  struct timespec rqtp = {0, 0L};
   Clock *clock = (Clock *)clock_ptr;
 
-  while (clock->running) {
-    clock->tick();
+  while (clock->is_running()) {
+    rqtp.tv_nsec = clock->tick();
     if (nanosleep(&rqtp, nullptr) == -1)
       return nullptr;
   }
@@ -18,49 +14,46 @@ void *clock_send_thread(void *clock_ptr) {
 }
 
 Clock::Clock(sqlite3_int64 id)
-  : Pipe(id, "Transpose"), running(false), thread(nullptr)
+  : Pipe(id, "Transpose"), thread(nullptr)
 {
   set_bpm(120);
-  start();
 }
 
 Clock::~Clock() {
-  if (running)
+  if (is_running())
     stop();
 }
 
-void Clock::set_bpm(int new_val) {
+void Clock::set_bpm(float new_val) {
   _bpm = new_val;
-  microsecs_per_tick = 2500000L / (long)_bpm;
+  nanosecs_per_tick = (long)(2.5e9 / _bpm);
 }
 
 void Clock::start() {
-  if (running)
+  if (is_running())
     return;
-  prev_beat_sent_at = 0L;
   int status = pthread_create(&thread, 0, clock_send_thread, this);
-  running = true;
 }
 
 void Clock::stop() {
-  running = false;
+  thread = nullptr;
 }
 
-void Clock::tick() {
-  if (!running)
-    return;
-
+// Sends CLOCK message downstream and returns the amount of time to wait
+// until the next tick, in nanoseconds.
+long Clock::tick() {
   struct timeval tp;
   struct timezone tzp;
-  int status = gettimeofday(&tp, &tzp);
-  if (status != 0)
-    return;
 
-  long now_msecs = (tp.tv_sec * 1000L) + tp.tv_usec;
-  if ((now_msecs - prev_beat_sent_at) >= microsecs_per_tick) {
-    downstream->process(CLOCK, 0, 0, 0);
-    prev_beat_sent_at = now_msecs;
-  }
+  gettimeofday(&tp, &tzp);
+  long start_msecs = (tp.tv_sec * 1000L) + tp.tv_usec;
+
+  downstream->process(CLOCK, 0, 0, 0);
+
+  gettimeofday(&tp, &tzp);
+  long end_msecs = (tp.tv_sec * 1000L) + tp.tv_usec;
+
+  return nanosecs_per_tick - (end_msecs - start_msecs);
 }
 
 void Clock::process(byte status, byte data1, byte data2, byte data3) {

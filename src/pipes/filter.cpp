@@ -1,4 +1,3 @@
-#include "../predicates.h"
 #include "filter.h"
 
 Filter::Filter(sqlite3_int64 id)

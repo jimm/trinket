@@ -1,4 +1,3 @@
-#include "../predicates.h"
 #include "fan.h"
 
 Fan::Fan(sqlite3_int64 id)
