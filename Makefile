@@ -5,11 +5,10 @@ WXFLAGS := $(shell wx-config --cxxflags)
 WXLIBS := $(shell wx-config --libs)
 
 CPP = $(shell wx-config --cxx)
-CPPFLAGS += -std=c++11 -MD -MP -g $(DEBUG) $(WXFLAGS)
+CPPFLAGS += -std=c++14 -MD -MP -g $(DEBUG) $(WXFLAGS)
 
 LD = $(shell wx-config --ld)
-LIBS = -lc -lc++ -lsqlite3 -lportmidi $(WXLIBS)
-LDFLAGS += $(LIBS) $(WXLIBS)
+LIBS = -lportmidi
 
 prefix = /usr/local
 exec_prefix = $(prefix)
@@ -20,6 +19,7 @@ OBJS = $(SRC:%.cpp=%.o)
 TEST_SRC = $(wildcard test/*.cpp)
 TEST_OBJS = $(TEST_SRC:%.cpp=%.o)
 TEST_OBJ_FILTERS = src/main.o
+TEST_LIBS = $(LIBS) -lCatch2Main -lCatch2
 
 CATCH_CATEGORY ?= ""
 
@@ -28,26 +28,16 @@ CATCH_CATEGORY ?= ""
 all: $(NAME)
 
 $(NAME): $(OBJS)
-	$(LD) $(LDFLAGS) -o $@ $^
+	$(CXX) $(LDFLAGS) $(LIBS) $(WXLIBS) -o $@ $^
 
 -include $(SRC:%.cpp=%.d)
 -include $(TEST_SRC:%.cpp=%.d)
 
-storage.cpp:	src/schema.sql.h
-
-# Turn db/schema.sql into a C++11 header file that defines a string
-# containing the SQL.
-src/schema.sql.h: db/schema.sql
-	@echo "// THIS FILE IS GENERATED FROM $<" > $@ \
-	&& echo 'static const char * const SCHEMA_SQL = R"(' >> $@ \
-	&& cat $< >> $@ \
-	&& echo ')";' >> $@
-
 test: $(NAME)_test
-	./$(NAME)_test --use-colour no $(CATCH_CATEGORY)
+	./$(NAME)_test --colour-mode=none $(CATCH_CATEGORY)
 
 $(NAME)_test:	$(OBJS) $(TEST_OBJS)
-	$(LD) $(LDFLAGS) -o $@ $(filter-out $(TEST_OBJ_FILTERS),$^)
+	$(LD) $(LDFLAGS) $(TEST_LIBS) -o $@ $(filter-out $(TEST_OBJ_FILTERS),$^)
 
 install:	$(bindir)/$(NAME)
 
